@@ -6,7 +6,7 @@
 - **Link repo:** https://github.com/domanhnghiaforwork-cloud/K4-Track4-Day06-DoManhNghia-2A202602971-3D-From-Point-Clouds
 - **Topic:** A — Kiểm tra calibration LiDAR-camera bằng projection
 - **Dataset:** data/kitti_mini, data/synthetic, data/nuscenes_mini_subset
-- **Các frame đã dùng:** 000011, 000012, 000020 (KITTI), 000000 (synthetic), scene-0103_010 (nuScenes)
+- **Các frame đã dùng:** 000011, 000012, 000049 (KITTI), 000000 (synthetic), scene-0103_010 (nuScenes)
 
 > Hãy viết ngắn: mỗi mục từ 3 đến 8 dòng, ưu tiên số liệu và hình ảnh.
 
@@ -17,13 +17,21 @@
 
 ## 2. Evidence
 
-Bảng hoặc plot số liệu, kèm ảnh/video demo. Ghi rõ đường dẫn file trong `results/`.
+Kết quả benchmark chi tiết lưu tại [`results/calibration_drift_sweep.csv`](../results/calibration_drift_sweep.csv). Thí nghiệm sweep góc lệch Yaw trên các frame `000011`, `000012`, `000049` đo tỷ lệ điểm rơi đúng 2D box (% In-Box) và độ lệch pixel:
 
-| Cấu hình / mức perturb | Metric 1 | Metric 2 | Ghi chú |
-|---|---|---|---|
-| [ĐIỀN] | | | |
+| Cấu hình / Mức perturb | % In-Box Xa ($\ge 20\text{ m}$) | % In-Box Gần ($< 20\text{ m}$) | Độ lệch pixel TB (px) | Đánh giá & Ghi chú |
+|---|---|---|---|---|
+| **Yaw 0.0° (Chuẩn)** | **97.45%** | 65.84% | 0.0 px | Baseline chuẩn, điểm khớp khít vật thể |
+| **Yaw 0.5°** | 89.67% (-7.8%) | 65.10% | 7.7 px | Bắt đầu lệch nhẹ ở rìa vật thể xa |
+| **Yaw 1.0°** | **72.27% (-25.2%)** | 63.65% | 15.5 px | Vượt ngưỡng cảnh báo: mất >25% điểm vật thể xa |
+| **Yaw 1.5°** | 58.02% (-39.4%) | 61.96% | 23.1 px | Điểm LiDAR lệch rõ rệt sang trái/phải |
+| **Yaw 2.0°** | **42.64% (-54.8%)** | 59.99% | 30.8 px | Gãy đổ: mất >50% điểm vật thể xa |
+| **Yaw 3.0°** | 28.29% (-69.2%) | 56.08% | 45.9 px | Hầu hết điểm trượt ra ngoài khung 2D box |
 
-![demo](../results/figures/[ĐIỀN].png)
+- **Đo Latency (Bonus B3):** 25 lần lặp trên CPU, bỏ lần đầu (warm-up): $p50 = 18.89\text{ ms}$, $p95 = 23.91\text{ ms}$ ($\approx 53\text{ FPS}$).
+
+![calibration_drift_analysis](../results/figures/calibration_drift_analysis.png)
+
 
 ## 3. Failure case
 
@@ -48,6 +56,9 @@ Các lệnh tái tạo lại toàn bộ kết quả từ repo sạch:
 python -m starter.projection --data-root data/synthetic --frame 000000
 python -m starter.projection --data-root data/kitti_mini --frame 000011
 python -m starter.projection --data-root data/nuscenes_mini_subset --frame scene-0103_010
+
+# 2. Chạy benchmark sweep calibration drift và đo latency (CP3)
+python src/evaluate_calibration_drift.py --data-root data/kitti_mini --frames 000011,000012,000049
 ```
 
 ## 6. Khai báo sử dụng AI
