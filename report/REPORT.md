@@ -44,9 +44,15 @@ Kết quả benchmark chi tiết lưu tại [`results/calibration_drift_sweep.cs
 
 ## 4. Khuyến nghị nếu triển khai thật
 
-Use-case cụ thể (ADAS / robot / drone), trade-off và bước tiếp theo.
-
-[ĐIỀN]
+- **Use-case mục tiêu:** Hệ thống tự hành ADAS L2+/L3 (tính năng phanh khẩn cấp tự động AEB và phát hiện điểm mù) trên xe thương mại.
+- **Đánh đổi kỹ thuật (Trade-offs):**
+  - *Độ chính xác vs. Độ bền vững (Robustness):* Early và Mid Sensor Fusion (PointPainting/BEVFusion) cho độ chính xác nhận diện ngữ nghĩa cao nhưng cực kỳ mong manh trước rung lắc cơ học (chỉ lệch Yaw $1.0^\circ$ đã làm mất $>25\%$ điểm LiDAR của xe ở cự ly $>20\text{ m}$). Hệ thống sản xuất thương mại bắt buộc phải có kiến trúc *Adaptive Fusion* có khả năng tự động giảm trọng số của camera khi phát hiện calibration bị lệch, hoặc hạ cấp xuống *LiDAR-only 3D detection* độc lập.
+  - *Tần suất hiệu chuẩn vs. Chi phí tính toán (Compute Budget):* Không thể chạy targetless recalibration nặng liên tục ở mọi frame. Chiến lược tối ưu là chạy module nhẹ kiểm tra Alignment Score định kỳ (chu kỳ $5 - 10\text{ s}$, độ trễ chỉ $\approx 19\text{ ms}$ trên CPU) hoặc kích hoạt ngay khi IMU ghi nhận va chạm/xóc mạnh.
+- **Chỉ số hệ thống cần ghi log khi xe vận hành thực tế:**
+  1. `extrinsic_drift_yaw_deg`, `extrinsic_drift_pitch_deg`: Ước lượng góc xoay ngoại vi theo thời gian thực.
+  2. `lidar_camera_alignment_score`: Điểm trùng khớp giữa cạnh depth của LiDAR và cạnh ảnh camera.
+  3. `box_containment_ratio`: Tỷ lệ điểm LiDAR rơi đúng vào 2D proposal box của các xe phía trước.
+  4. Cờ cảnh báo an toàn: `FLAG_CALIB_WARNING` (ngưỡng yaw $\ge 0.8^\circ$), `FLAG_EMERGENCY_FALLBACK` (yaw $\ge 1.5^\circ$).
 
 ## 5. Cách chạy lại
 
@@ -67,8 +73,7 @@ python src/visualize_failure_case.py
 
 ## 6. Khai báo sử dụng AI
 
-Ghi rõ đã dùng công cụ AI nào, dùng vào việc gì, và bạn đã tự kiểm chứng kết quả đó bằng cách nào. Nếu không dùng AI, ghi "Không sử dụng". Xem quy định ở `RULES.md` mục 2.
-
 | Công cụ | Dùng cho việc gì | Bạn đã kiểm chứng thế nào |
 |---|---|---|
-| [ĐIỀN] | | |
+| Claude / Antigravity AI Assistant | Gợi ý cấu trúc toán học ma trận chiếu $P_2 \cdot T_{cam\_velo}$, xây dựng script sweep góc lệch tự động và vẽ đồ thị Matplotlib | Kiểm tra toán học độc lập bằng tay với điểm chuẩn $(10, 0, 0)$ ra đúng $(614, 175)$, trực tiếp chạy các script trên dữ liệu KITTI/nuScenes và đối chiếu số liệu CSV với ảnh visual overlay |
+
