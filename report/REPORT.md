@@ -35,11 +35,12 @@ Kết quả benchmark chi tiết lưu tại [`results/calibration_drift_sweep.cs
 
 ## 3. Failure case
 
-Nêu khi nào hệ thống hoặc phương pháp fail, vì sao fail, và liên hệ tới lớp nào trong 6 lớp debug: I/O, Geometry, Time, Preprocess, Model, Metric.
+- **Hiện tượng:** Khi góc quay Yaw bị lệch $2.0^\circ$ (do rung chấn cơ học hoặc giá đỡ cảm biến bị xê dịch), điểm LiDAR bị trượt ngang sang phải $\approx 31\text{ px}$. Trên frame `000011`, người đi bộ ở cự ly $34.1\text{ m}$ bị trượt mất $100\%$ số điểm LiDAR ra ngoài 2D box rơi vào tường/lòng đường phía sau; xe hơi ở cự ly $26.6\text{ m}$ mất $57.4\%$ số điểm (cụm điểm thân xe chiếu tràn sang làn đường bên cạnh).
+- **Phân loại lớp debug:** **Geometry (Hình học & Calibration Drift)**. Ma trận Extrinsic $T_{cam\_velo}$ không còn đại diện đúng vị trí tương đối giữa LiDAR và camera trong không gian $SE(3)$. Do tiêu cự lớn ($f_x \approx 721\text{ px}$), góc lệch chỉ $2^\circ$ tạo ra độ dịch ngang $\Delta u \approx f_x \tan(\Delta \theta) \approx 25 - 31\text{ px}$, vượt quá kích thước pixel của các đối tượng ở xa.
+- **Hậu quả hệ thống:** Pipeline Sensor Fusion (PointPainting/BEVFusion) gán nhầm độ sâu xa của mặt đường cho người đi bộ (dẫn đến ước lượng sai khoảng cách phanh), hoặc gán nhầm điểm của xe lên khoảng trống trên đường tạo ra "vật cản ảo" (phantom obstacle) gây phanh gấp nguy hiểm.
+- **Giải pháp khắc phục trên xe thật:** Xây dựng module giám sát online tính Alignment Score (đo mức độ trùng khớp giữa depth edge của LiDAR và Canny edge của camera trên các cột mốc thẳng đứng). Khi score tụt dưới ngưỡng cảnh báo, hệ thống lập tức kích hoạt cờ `CALIBRATION_UNRELIABLE` và chuyển về chế độ dự phòng an toàn (LiDAR-only 3D detection).
 
-![failure](../results/figures/fail_[ĐIỀN].png)
-
-[ĐIỀN]
+![failure](../results/figures/fail_01_yaw_drift_mismatch.png)
 
 ## 4. Khuyến nghị nếu triển khai thật
 
@@ -59,6 +60,9 @@ python -m starter.projection --data-root data/nuscenes_mini_subset --frame scene
 
 # 2. Chạy benchmark sweep calibration drift và đo latency (CP3)
 python src/evaluate_calibration_drift.py --data-root data/kitti_mini --frames 000011,000012,000049
+
+# 3. Tạo ảnh phân tích Failure Case trực quan (CP4)
+python src/visualize_failure_case.py
 ```
 
 ## 6. Khai báo sử dụng AI
